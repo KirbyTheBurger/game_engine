@@ -1,0 +1,21 @@
+[package]
+name = "engine"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.103"
+bytemuck = "1.25.1"
+env_logger = "0.11.11"
+glam = "0.33.2"
+log = "0.4.33"
+mlua = { version = "0.12.0", features = ["async", "luau-jit", "macros", "send", "vendored"] }
+pollster = "1.0.1"
+tokio = { version = "1.53.0", features = ["rt-multi-thread", "time", "macros"] }
+wgpu = "30.0.0"
+winit = "0.30.13"
+
+[dependencies.image]
+version = "0.25.10"
+default-features = false
+features = ["png", "jpeg", "rayon"]

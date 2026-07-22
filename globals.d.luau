@@ -23,6 +23,7 @@ declare function Transform(x: number, y: number): Transform
 declare extern type Camera with
     pos: Transform
     function setPrimary(self): ()
+    function setPos(self, x: number, y: number): ()
 end
 
 declare Camera: {

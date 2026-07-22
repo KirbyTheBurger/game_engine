@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.103"
 bytemuck = "1.25.1"
+derive_more = { version = "2.1.1", features = ["add", "add_assign"] }
 env_logger = "0.11.11"
 glam = "0.33.2"
 log = "0.4.33"

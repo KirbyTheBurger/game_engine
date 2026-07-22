@@ -1,18 +1,29 @@
+use derive_more::{Add, AddAssign, Sub, SubAssign};
 use mlua::{AnyUserData, FromLua, Lua, UserData, userdata_impl};
 
-#[derive(Debug, Clone, Copy, UserData, FromLua)]
+#[derive(Debug, Clone, Copy, UserData, FromLua, Add, Sub)]
 pub struct Transform {
-    #[lua(get, set)]
+    #[lua(get)]
     pub x: f32,
-    #[lua(get, set)]
+    #[lua(get)]
     pub y: f32,
 }
 
 #[userdata_impl]
 impl Transform {
-    #[lua(infallible, meta)]
-    fn __call(_this: AnyUserData, x: f32, y: f32) -> Self {
+    #[lua(infallible, meta, name = "__call")]
+    fn new(_self: AnyUserData, x: f32, y: f32) -> Self {
         Self { x, y }
+    }
+
+    #[lua(infallible, meta, name = "__add")]
+    fn add(&self, rhs: &Transform) -> Transform {
+        *self + *rhs
+    }
+
+    #[lua(infallible, meta, name = "__sub")]
+    fn sub(&self, rhs: &Transform) -> Transform {
+        *self - *rhs
     }
 }
 

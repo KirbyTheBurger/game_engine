@@ -1,10 +1,18 @@
 use std::sync::Arc;
 
+use glam::Vec2;
 use mlua::Lua;
 use wgpu::{Operations, util::DeviceExt};
 use winit::{keyboard::KeyCode, window::Window};
 
-use crate::{Shared, api, command::CommandQueue, graphics::{camera::{CamInstances, Camera, CameraUniform}, texture, vertex::{INDICES, VERTICES, Vertex}}, input::InputState};
+use crate::{Shared, api, command::CommandQueue, graphics::{camera::{CamInstances, Camera, CameraUniform}, instance::{Instance, InstanceRaw}, texture, vertex::{INDICES, VERTICES, Vertex}}, input::InputState};
+
+const NUM_INSTANCES_PER_ROW: u32 = 10;
+const INSTANCE_DISPLACEMENT: glam::Vec3 = glam::Vec3::new(
+    NUM_INSTANCES_PER_ROW as f32 * 0.5,
+    0.0,
+    NUM_INSTANCES_PER_ROW as f32 * 0.5,
+);
 
 pub struct State {
     surface: wgpu::Surface<'static>,
@@ -28,6 +36,8 @@ pub struct State {
     lua: Lua,
     last_frame: std::time::Instant,
     cam_instances: Shared<CamInstances>,
+    instances: Vec<Instance>,
+    instance_buffer: wgpu::Buffer,
 }
 
 impl State {
@@ -82,7 +92,7 @@ impl State {
             color_space: wgpu::SurfaceColorSpace::Auto,
         };
 
-        let diffuse_bytes = include_bytes!("image.png");
+        let diffuse_bytes = include_bytes!("brownie.png");
         let diffuse_texture = texture::Texture::from_bytes(
             &device,
             &queue,
@@ -181,7 +191,7 @@ impl State {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("../shader.wgsl").into())
+            source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into())
         });
 
         let render_pipeline_layout = device.create_pipeline_layout(
@@ -203,7 +213,8 @@ impl State {
                     module: &shader,
                     entry_point: Some("vs_main"),
                     buffers: &[
-                        Some(Vertex::desc())
+                        Some(Vertex::desc()),
+                        Some(InstanceRaw::desc()),
                     ],
                     compilation_options: wgpu::PipelineCompilationOptions::default(),
                 },
@@ -254,6 +265,30 @@ impl State {
 
         let num_indices = INDICES.len() as u32;
 
+        let instances = (0..10)
+            .flat_map(|y| {
+                (0..10).map(move |x| Instance {
+                    position: glam::Vec3::new(
+                        x as f32 / 2.0,
+                        y as f32 / 2.0,
+                        0.0, // z-index
+                    ),
+                    rotation: 0.0,
+                    scale: Vec2::new(0.5, 0.5),
+                })
+            })
+            .collect::<Vec<_>>();
+
+        let instance_data =
+            instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
+        let instance_buffer = device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Instance Buffer"),
+                contents: bytemuck::cast_slice(&instance_data),
+                usage: wgpu::BufferUsages::VERTEX,
+            }
+        );
+
         let command_queue = CommandQueue::new();
         let input_state = InputState::new();
 
@@ -288,6 +323,8 @@ impl State {
             lua,
             last_frame: std::time::Instant::now(),
             cam_instances,
+            instances,
+            instance_buffer,
         })
     }
 
@@ -359,9 +396,14 @@ impl State {
             render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
             render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 
-            render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
+            render_pass.draw_indexed(
+                0..self.num_indices,
+                0,
+                0..self.instances.len() as _,
+            );
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));

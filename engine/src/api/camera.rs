@@ -30,6 +30,7 @@ pub fn camera_mod(
 
 #[derive(Clone, UserData)]
 pub struct LuauCamera {
+    #[lua(get)]
     pos: Transform,
     #[lua(skip)]
     id: i32,
@@ -39,9 +40,14 @@ pub struct LuauCamera {
 
 #[userdata_impl]
 impl LuauCamera {
-    #[lua(infallible)]
-    #[allow(non_snake_case)]
-    fn setPrimary(&self) {
+    #[lua(infallible, name = "setPrimary")]
+    fn set_primary(&self) {
         self.instances.get().primary = Some(self.id);
+    }
+
+    #[lua(setter, name = "pos", infallible)]
+    fn set_pos(&mut self, pos: Transform) {
+        self.pos = pos;
+        self.instances.get().cameras.insert(self.id, pos);
     }
 }

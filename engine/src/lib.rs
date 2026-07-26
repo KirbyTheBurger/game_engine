@@ -1,11 +1,9 @@
 use std::sync::{Arc, Mutex};
 
 pub mod graphics;
-mod command;
 mod input;
 mod api;
 
-#[derive(Clone)]
 pub struct Shared<T>(pub Arc<Mutex<T>>);
 
 impl<T> Shared<T> {
@@ -15,5 +13,11 @@ impl<T> Shared<T> {
 
     pub fn get(&self) -> std::sync::MutexGuard<'_, T> {
         self.0.lock().unwrap()
+    }
+}
+
+impl<T> Clone for Shared<T> {
+    fn clone(&self) -> Self {
+        Shared(self.0.clone())
     }
 }

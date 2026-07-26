@@ -21,11 +21,27 @@ end
 declare function Transform(x: number, y: number): Transform
 
 declare extern type Camera with
-    pos: Transform
+    position: Transform
     function setPrimary(self): ()
     function setPos(self, x: number, y: number): ()
 end
 
 declare Camera: {
-    create: (pos: Transform) -> Camera
+    new: (position: Transform) -> Camera
+}
+
+declare extern type Texture with
+
+end
+
+declare Texture: {
+    new: (path: string) -> Texture
+}
+
+declare extern type Sprite with
+
+end
+
+declare Sprite: {
+    new: (x: number, y: number, texture: Texture) -> Sprite
 }

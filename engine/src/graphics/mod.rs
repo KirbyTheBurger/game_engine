@@ -6,7 +6,7 @@ mod app;
 mod state;
 mod vertex;
 mod texture;
-mod instance;
+pub mod instance;
 pub mod camera;
 
 pub fn init() -> anyhow::Result<()> {

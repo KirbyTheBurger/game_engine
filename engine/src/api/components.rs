@@ -1,4 +1,4 @@
-use derive_more::{Add, AddAssign, Sub, SubAssign};
+use derive_more::{Add, Sub};
 use mlua::{AnyUserData, FromLua, Lua, UserData, userdata_impl};
 
 #[derive(Debug, Clone, Copy, UserData, FromLua, Add, Sub)]

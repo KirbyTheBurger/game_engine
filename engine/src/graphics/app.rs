@@ -53,7 +53,7 @@ impl ApplicationHandler<State> for App {
                     }
                 }
             },
-                        WindowEvent::KeyboardInput {
+            WindowEvent::KeyboardInput {
                 event:
                     KeyEvent {
                         physical_key: PhysicalKey::Code(code),

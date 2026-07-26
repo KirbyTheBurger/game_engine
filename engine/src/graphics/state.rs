@@ -1,18 +1,12 @@
-use std::sync::Arc;
+const MAX_INSTANCES: usize = 10_000;
 
-use glam::Vec2;
+use std::{collections::HashMap, sync::Arc};
+
 use mlua::Lua;
 use wgpu::{Operations, util::DeviceExt};
 use winit::{keyboard::KeyCode, window::Window};
 
-use crate::{Shared, api, command::CommandQueue, graphics::{camera::{CamInstances, Camera, CameraUniform}, instance::{Instance, InstanceRaw}, texture, vertex::{INDICES, VERTICES, Vertex}}, input::InputState};
-
-const NUM_INSTANCES_PER_ROW: u32 = 10;
-const INSTANCE_DISPLACEMENT: glam::Vec3 = glam::Vec3::new(
-    NUM_INSTANCES_PER_ROW as f32 * 0.5,
-    0.0,
-    NUM_INSTANCES_PER_ROW as f32 * 0.5,
-);
+use crate::{Shared, api, graphics::{camera::{CamInstances, Camera, CameraUniform}, instance::{Instance, InstanceRaw, TextureReg}, vertex::{INDICES, VERTICES, Vertex}}, input::InputState};
 
 pub struct State {
     surface: wgpu::Surface<'static>,
@@ -25,19 +19,17 @@ pub struct State {
     window: Arc<Window>,
     index_buffer: wgpu::Buffer,
     num_indices: u32,
-    diffuse_bind_group: wgpu::BindGroup,
-    diffuse_texture: texture::Texture,
     camera: Shared<Camera>,
     camera_uniform: CameraUniform,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
-    command_queue: CommandQueue,
     input_state: InputState,
     lua: Lua,
     last_frame: std::time::Instant,
     cam_instances: Shared<CamInstances>,
-    instances: Vec<Instance>,
+    instances: Shared<Vec<Shared<Instance>>>,
     instance_buffer: wgpu::Buffer,
+    texture_registry: Shared<TextureReg>,
 }
 
 impl State {
@@ -92,14 +84,6 @@ impl State {
             color_space: wgpu::SurfaceColorSpace::Auto,
         };
 
-        let diffuse_bytes = include_bytes!("brownie.png");
-        let diffuse_texture = texture::Texture::from_bytes(
-            &device,
-            &queue,
-            diffuse_bytes,
-            "image.png"
-        ).unwrap();
-
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[
@@ -122,23 +106,6 @@ impl State {
                 ],
                 label: Some("texture_bind_group_layout"),
             });
-
-        let diffuse_bind_group = device.create_bind_group(
-            &wgpu::BindGroupDescriptor {
-                layout: &texture_bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
-                    },
-                ],
-                label: Some("diffuse_bind_group"),
-            }
-        );
 
         let camera = Camera {
             x: 0.0,
@@ -265,40 +232,32 @@ impl State {
 
         let num_indices = INDICES.len() as u32;
 
-        let instances = (0..10)
-            .flat_map(|y| {
-                (0..10).map(move |x| Instance {
-                    position: glam::Vec3::new(
-                        x as f32 / 2.0,
-                        y as f32 / 2.0,
-                        0.0, // z-index
-                    ),
-                    rotation: 0.0,
-                    scale: Vec2::new(0.5, 0.5),
-                })
-            })
-            .collect::<Vec<_>>();
-
-        let instance_data =
-            instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
-        let instance_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
+        let instance_buffer = device.create_buffer(
+            &wgpu::BufferDescriptor {
                 label: Some("Instance Buffer"),
-                contents: bytemuck::cast_slice(&instance_data),
-                usage: wgpu::BufferUsages::VERTEX,
+                size: (MAX_INSTANCES * std::mem::size_of::<InstanceRaw>()) as u64,
+                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
             }
         );
 
-        let command_queue = CommandQueue::new();
         let input_state = InputState::new();
 
         let camera = Shared::new(camera);
 
         let cam_instances = Shared::new(CamInstances::new());
 
+        let instances = Shared::new(Vec::new());
+        let texture_registry = Shared::new(TextureReg(HashMap::new()));
+
         let lua = api::init(
             input_state.clone(),
             cam_instances.clone(),
+            instances.clone(),
+            texture_registry.clone(),
+            device.clone(),
+            queue.clone(),
+            texture_bind_group_layout.clone(),
         )?;
 
         Ok(Self {
@@ -312,19 +271,17 @@ impl State {
             vertex_buffer,
             index_buffer,
             num_indices,
-            diffuse_bind_group,
-            diffuse_texture,
             camera,
             camera_uniform,
             camera_buffer,
             camera_bind_group,
-            command_queue,
             input_state,
             lua,
             last_frame: std::time::Instant::now(),
             cam_instances,
             instances,
             instance_buffer,
+            texture_registry,
         })
     }
 
@@ -393,17 +350,34 @@ impl State {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
             render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
+
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 
-            render_pass.draw_indexed(
-                0..self.num_indices,
-                0,
-                0..self.instances.len() as _,
-            );
+            let mut groups: HashMap<i32, Vec<InstanceRaw>> = HashMap::new();
+            for instance in self.instances.get().iter() {
+                let inst = instance.get();
+                groups.entry(inst.texture_id).or_default().push(inst.to_raw());
+            }
+
+            let texture_reg = self.texture_registry.get();
+            for (texture_id, raw_instances) in &groups {
+                let (_, bind_group) = texture_reg.0.get(texture_id).unwrap();
+
+                self.queue.write_buffer(
+                    &self.instance_buffer,
+                    0,
+                    bytemuck::cast_slice(raw_instances),
+                );
+
+                render_pass.set_bind_group(0, bind_group, &[]);
+                render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
+
+                render_pass.draw_indexed(
+                    0..self.num_indices, 0, 0..raw_instances.len() as u32
+                );
+            }
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));

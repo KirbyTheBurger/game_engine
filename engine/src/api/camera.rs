@@ -8,20 +8,20 @@ pub fn camera_mod(
 ) -> mlua::Result<()> {
     let camera_table = lua.create_table()?;
 
-    let new = lua.create_function(move |_, pos: Transform| {
+    let new = lua.create_function(move |_, position: Transform| {
         let instance_table = cam_instances.clone();
         let id = instance_table.get().next_id();
 
         let instance = LuauCamera {
-            pos,
+            position,
             id,
             instances: instance_table.clone(),
         };
-        cam_instances.get().cameras.insert(id, pos);
+        cam_instances.get().cameras.insert(id, position);
 
         Ok(instance)
     })?;
-    camera_table.set("create", new)?;
+    camera_table.set("new", new)?;
 
     lua.globals().set("Camera", camera_table)?;
 
@@ -31,7 +31,7 @@ pub fn camera_mod(
 #[derive(Clone, UserData)]
 pub struct LuauCamera {
     #[lua(get)]
-    pos: Transform,
+    position: Transform,
     #[lua(skip)]
     id: i32,
     #[lua(skip)]
@@ -45,9 +45,9 @@ impl LuauCamera {
         self.instances.get().primary = Some(self.id);
     }
 
-    #[lua(setter, name = "pos", infallible)]
+    #[lua(setter, name = "position", infallible)]
     fn set_pos(&mut self, pos: Transform) {
-        self.pos = pos;
+        self.position = pos;
         self.instances.get().cameras.insert(self.id, pos);
     }
 }

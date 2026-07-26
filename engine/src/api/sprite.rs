@@ -67,19 +67,48 @@ struct Sprite {
     texture_id: i32,
     #[lua(skip)]
     instance: Shared<Instance>,
-    #[lua(skip)]
+    #[lua(get)]
     position: Transform,
-    #[lua(skip)]
+    #[lua(get)]
     rotation: f32,
-    #[lua(skip)]
+    #[lua(get)]
     scale: Transform,
-    #[lua(skip)]
+    #[lua(get)]
     zindex: f32,
 }
 
 #[userdata_impl]
 impl Sprite {
-    
+    #[lua(setter, infallible, name = "position")]
+    fn set_pos(&mut self, pos: Transform) {
+        self.position = pos;
+        self.instance.get().position = Vec3 { x: pos.x, y: pos.y, z: self.zindex };
+    }
+
+    #[lua(setter, infallible, name = "rotation")]
+    fn set_rotation(&mut self, rotation: f32) {
+        self.rotation = rotation;
+        self.instance.get().rotation = rotation;
+    }
+
+    #[lua(setter, infallible, name = "zindex")]
+    fn set_zindex(&mut self, zindex: f32) {
+        self.zindex = zindex;
+        let pos = self.instance.get().position;
+        self.instance.get().position = Vec3 { x: pos.x, y: pos.y, z: zindex };
+    }
+
+    #[lua(setter, infallible, name = "scale")]
+    fn set_scale(&mut self, scale: Transform) {
+        self.scale = scale;
+        self.instance.get().scale = Vec2 { x: scale.x, y: scale.y };
+    }
+
+    #[lua(setter, infallible, name = "texture")]
+    fn set_texture(&mut self, id: Texture) {
+        self.texture_id = id.0;
+        self.instance.get().texture_id = id.0;
+    }
 }
 
 #[derive(Clone, UserData, FromLua)]

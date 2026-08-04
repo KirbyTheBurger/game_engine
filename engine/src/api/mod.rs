@@ -24,7 +24,7 @@ pub fn init(
     sprite_mod(&mut lua, instances, texture_reg, device, queue, layout)?;
     register_component_classes(&mut lua)?;
 
-    let script = std::fs::read_to_string("test.luau")?;
+    let script = std::fs::read_to_string("main.luau")?;
     lua.load(&script).exec().unwrap();
 
     Ok(lua)

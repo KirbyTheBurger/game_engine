@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use glam::{Vec2, Vec3};
 use wgpu::BindGroup;
 
-use crate::graphics::texture::{self, Texture};
+use crate::{Shared, graphics::texture::{self, Texture}};
+
+pub static INSTANCES: Shared<Vec<Instance>> = Shared::new();
+pub static TEXTURE_REG: Shared<TextureReg> = Shared::new();
 
 #[derive(Clone)]
 pub struct Instance {

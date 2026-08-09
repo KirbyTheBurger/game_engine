@@ -6,7 +6,7 @@ use mlua::Lua;
 use wgpu::{Operations, util::DeviceExt};
 use winit::{keyboard::KeyCode, window::Window};
 
-use crate::{Shared, api, graphics::{camera::{CamInstances, Camera, CameraUniform}, instance::{Instance, InstanceRaw, TextureReg}, vertex::{INDICES, VERTICES, Vertex}}, input::InputState};
+use crate::{api, graphics::{camera::{CAM_INSTANCES, CAMERA, CamInstances, Camera, CameraUniform}, instance::{INSTANCES, InstanceRaw, TEXTURE_REG, TextureReg}, vertex::{INDICES, VERTICES, Vertex}}, input::InputState};
 
 pub struct State {
     surface: wgpu::Surface<'static>,
@@ -19,17 +19,13 @@ pub struct State {
     window: Arc<Window>,
     index_buffer: wgpu::Buffer,
     num_indices: u32,
-    camera: Shared<Camera>,
     camera_uniform: CameraUniform,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
     input_state: InputState,
     lua: Lua,
     last_frame: std::time::Instant,
-    cam_instances: Shared<CamInstances>,
-    instances: Shared<Vec<Shared<Instance>>>,
     instance_buffer: wgpu::Buffer,
-    texture_registry: Shared<TextureReg>,
 }
 
 impl State {
@@ -106,18 +102,18 @@ impl State {
                 ],
                 label: Some("texture_bind_group_layout"),
             });
+        
 
-        let camera = Camera {
+        CAMERA.set(Camera {
             x: 0.0,
             y: 0.0,
             zoom: 1.0,
             aspect: config.width as f32 / config.height as f32,
             znear: -1.0,
             zfar: 1.0,
-        };
-
+        }).unwrap();
         let mut camera_uniform = CameraUniform::new();
-        camera_uniform.update_view_proj(&camera);
+        camera_uniform.update_view_proj(&CAMERA.get());
 
         let camera_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
@@ -243,18 +239,13 @@ impl State {
 
         let input_state = InputState::new();
 
-        let camera = Shared::new(camera);
+        CAM_INSTANCES.set(CamInstances::new()).unwrap();
 
-        let cam_instances = Shared::new(CamInstances::new());
-
-        let instances = Shared::new(Vec::new());
-        let texture_registry = Shared::new(TextureReg(HashMap::new()));
+        INSTANCES.set(Vec::new()).unwrap();
+        TEXTURE_REG.set(TextureReg(HashMap::new())).unwrap();
 
         let lua = api::init(
             input_state.clone(),
-            cam_instances.clone(),
-            instances.clone(),
-            texture_registry.clone(),
             device.clone(),
             queue.clone(),
             texture_bind_group_layout.clone(),
@@ -271,17 +262,13 @@ impl State {
             vertex_buffer,
             index_buffer,
             num_indices,
-            camera,
             camera_uniform,
             camera_buffer,
             camera_bind_group,
             input_state,
             lua,
             last_frame: std::time::Instant::now(),
-            cam_instances,
-            instances,
             instance_buffer,
-            texture_registry,
         })
     }
 
@@ -356,12 +343,11 @@ impl State {
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 
             let mut groups: HashMap<i32, Vec<InstanceRaw>> = HashMap::new();
-            for instance in self.instances.get().iter() {
-                let inst = instance.get();
-                groups.entry(inst.texture_id).or_default().push(inst.to_raw());
+            for instance in INSTANCES.get().iter() {
+                groups.entry(instance.texture_id).or_default().push(instance.to_raw());
             }
 
-            let texture_reg = self.texture_registry.get();
+            let texture_reg = TEXTURE_REG.get();
             for (texture_id, raw_instances) in &groups {
                 let (_, bind_group) = texture_reg.0.get(texture_id).unwrap();
 
@@ -394,9 +380,9 @@ impl State {
         let update: mlua::Function = self.lua.globals().get("update").unwrap();
         update.call::<()>(dt).unwrap();
 
-        let cam_instances = self.cam_instances.get();
+        let cam_instances = CAM_INSTANCES.get();
         if let Some(id) = cam_instances.primary {
-            let mut camera = self.camera.get();
+            let mut camera = CAMERA.get();
             let primary_cam_pos = match cam_instances.cameras.get(&id) {
                 Some(t) => t,
                 None => unreachable!(),
@@ -405,7 +391,7 @@ impl State {
             camera.y = primary_cam_pos.y;
         }
 
-        self.camera_uniform.update_view_proj(&self.camera.0.lock().unwrap().clone());
+        self.camera_uniform.update_view_proj(&CAMERA.get());
         self.queue.write_buffer(
             &self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform])
         );

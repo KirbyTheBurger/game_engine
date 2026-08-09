@@ -1,25 +1,23 @@
 use mlua::{Lua, UserData, userdata_impl};
 
-use crate::{Shared, api::components::Transform, graphics::camera::CamInstances};
+use crate::{api::components::Transform, graphics::camera::CAM_INSTANCES};
 
 pub fn camera_mod(
     lua: &mut Lua,
-    cam_instances: Shared<CamInstances>
 ) -> mlua::Result<()> {
     let camera_table = lua.create_table()?;
 
     let new = lua.create_function(move |_, position: Transform| {
-        let instance_table = cam_instances.clone();
-        let id = instance_table.get().next_id();
+        let mut cam_instances = CAM_INSTANCES.get();
+        let id = cam_instances.next_id();
 
-        let instance = LuauCamera {
+        let cam = LuauCamera {
             position,
             id,
-            instances: instance_table.clone(),
         };
-        cam_instances.get().cameras.insert(id, position);
+        cam_instances.cameras.insert(id, position);
 
-        Ok(instance)
+        Ok(cam)
     })?;
     camera_table.set("new", new)?;
 
@@ -34,20 +32,18 @@ pub struct LuauCamera {
     position: Transform,
     #[lua(skip)]
     id: i32,
-    #[lua(skip)]
-    instances: Shared<CamInstances>,
 }
 
 #[userdata_impl]
 impl LuauCamera {
     #[lua(infallible, name = "setPrimary")]
     fn set_primary(&self) {
-        self.instances.get().primary = Some(self.id);
+        CAM_INSTANCES.get().primary = Some(self.id);
     }
 
     #[lua(setter, name = "position", infallible)]
     fn set_pos(&mut self, pos: Transform) {
         self.position = pos;
-        self.instances.get().cameras.insert(self.id, pos);
+        CAM_INSTANCES.get().cameras.insert(self.id, pos);
     }
 }

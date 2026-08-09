@@ -1,23 +1,21 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Mutex, OnceLock};
 
 pub mod graphics;
 mod input;
 mod api;
 
-pub struct Shared<T>(pub Arc<Mutex<T>>);
+pub struct Shared<T>(pub OnceLock<Mutex<T>>);
 
 impl<T> Shared<T> {
-    pub fn new(t: T) -> Self {
-        Self(Arc::new(Mutex::new(t)))
+    pub const fn new() -> Self {
+        Self(OnceLock::new())
+    }
+
+    pub fn set(&self, t: T) -> Result<(), ()> {
+        self.0.set(Mutex::new(t)).map_err(|_| ())
     }
 
     pub fn get(&self) -> std::sync::MutexGuard<'_, T> {
-        self.0.lock().unwrap()
-    }
-}
-
-impl<T> Clone for Shared<T> {
-    fn clone(&self) -> Self {
-        Shared(self.0.clone())
+        self.0.get().unwrap().lock().unwrap()
     }
 }

@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
-use crate::api::components::Transform;
+use crate::{Shared, api::components::Transform};
 
-#[derive(Clone)]
+pub static CAMERA: Shared<Camera> = Shared::new();
+pub static CAM_INSTANCES: Shared<CamInstances> = Shared::new();
+
+#[derive(Clone, Debug)]
 pub struct Camera {
     pub x: f32,
     pub y: f32,

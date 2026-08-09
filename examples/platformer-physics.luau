@@ -15,7 +15,7 @@ local velocityY = 0
 local isGrounded = true
 local jumpKeyWasDown = false
 
-function update(dt: number)
+Runtime.OnUpdate(function(dt: number)
     if Input.isPressed(Input.KeyCode.A) then
         player.position -= Transform(MOVE_SPEED * dt, 0)
     elseif Input.isPressed(Input.KeyCode.D) then
@@ -38,4 +38,4 @@ function update(dt: number)
         velocityY = 0
         isGrounded = true
     end
-end
+end)

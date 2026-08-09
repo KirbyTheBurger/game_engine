@@ -6,7 +6,9 @@ use mlua::Lua;
 use wgpu::{Operations, util::DeviceExt};
 use winit::{keyboard::KeyCode, window::Window};
 
-use crate::{graphics::{camera::{CAM_INSTANCES, CAMERA, CamInstances, Camera, CameraUniform}, instance::{INSTANCES, InstanceRaw, TEXTURE_REG, TextureReg}, vertex::{INDICES, VERTICES, Vertex}}, input::{INPUT_STATE, InputState}};
+use crate::{Shared, graphics::{camera::{CAM_INSTANCES, CAMERA, CamInstances, Camera, CameraUniform}, instance::{INSTANCES, InstanceRaw, TEXTURE_REG, TextureReg}, vertex::{INDICES, VERTICES, Vertex}}, input::{INPUT_STATE, InputState}};
+
+pub static UPDATE_FNS: Shared<Vec<mlua::Function>> = Shared::new();
 
 pub struct State {
     surface: wgpu::Surface<'static>,
@@ -244,6 +246,8 @@ impl State {
         INSTANCES.set(Vec::new()).unwrap();
         TEXTURE_REG.set(TextureReg(HashMap::new())).unwrap();
 
+        UPDATE_FNS.set(Vec::new()).unwrap();
+
         Ok(Self {
             surface,
             device,
@@ -370,8 +374,9 @@ impl State {
         let dt = now.duration_since(self.last_frame).as_secs_f32();
         self.last_frame = now;
 
-        let update: mlua::Function = self.lua.globals().get("update").unwrap();
-        update.call::<()>(dt).unwrap();
+        for f in UPDATE_FNS.get().iter() {
+            f.call::<()>(dt).unwrap();
+        }
 
         let cam_instances = CAM_INSTANCES.get();
         if let Some(id) = cam_instances.primary {

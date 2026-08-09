@@ -5,7 +5,7 @@ use mlua::{FromLua, Lua, UserData, userdata_impl};
 
 use engine::graphics::instance::{INSTANCES, Instance, TEXTURE_REG};
 
-use crate::{components::Transform, wrap_instance};
+use crate::{components::Transform, userdata_from_value, wrap_instance};
 
 pub fn sprite_mod(
     lua: &mut Lua,
@@ -122,5 +122,11 @@ impl Sprite {
     }
 }
 
-#[derive(Clone, UserData, FromLua)]
+#[derive(Clone, UserData)]
 struct Texture(#[lua(skip)] i32);
+
+impl FromLua for Texture {
+    fn from_lua(value: mlua::prelude::LuaValue, _lua: &Lua) -> mlua::prelude::LuaResult<Self> {
+        userdata_from_value(value, "Texture")
+    }
+}

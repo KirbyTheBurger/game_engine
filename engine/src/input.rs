@@ -33,12 +33,12 @@ macro_rules! define_key_map {
             })
         }
 
-        pub fn key_to_str(k: KeyCode) -> Option<&'static str> {
-            Some(match k {
-                $(KeyCode::$winit => $short,)*
-                _ => return None,
-            })
-        }
+        // pub fn key_to_str(k: KeyCode) -> Option<&'static str> {
+        //     Some(match k {
+        //         $(KeyCode::$winit => $short,)*
+        //         _ => return None,
+        //     })
+        // }
 
         pub const KEY_NAMES: &[&str] = &[$($short),*];
     };

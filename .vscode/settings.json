@@ -1,5 +1,0 @@
-{
-    "luau-lsp.types.definitionFiles": [
-        "./globals.d.luau"
-    ]
-}

@@ -4,9 +4,7 @@ use engine::{graphics::camera::CAM_INSTANCES};
 
 use crate::{components::Transform, wrap_instance};
 
-pub fn camera_mod(
-    lua: &mut Lua,
-) -> mlua::Result<()> {
+pub fn camera_mod(lua: &mut Lua) -> mlua::Result<()> {
     let camera_table = lua.create_table()?;
 
     let cam_table_clone = camera_table.clone();

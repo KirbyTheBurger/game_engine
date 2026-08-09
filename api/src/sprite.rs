@@ -5,7 +5,7 @@ use mlua::{FromLua, Lua, UserData, userdata_impl};
 
 use engine::graphics::instance::{INSTANCES, Instance, TEXTURE_REG};
 
-use crate::components::Transform;
+use crate::{components::Transform, wrap_instance};
 
 pub fn sprite_mod(
     lua: &mut Lua,
@@ -16,21 +16,23 @@ pub fn sprite_mod(
     let texture_table = lua.create_table()?;
     let next_texture_id = Mutex::new(0);
 
-    let new_texture = lua.create_function(move |_, path: String| {
+    let table_clone = texture_table.clone();
+    let new_texture = lua.create_function(move |lua, path: String| {
         let id = *next_texture_id.lock().unwrap();
         let bytes = fs::read(path)?;
         TEXTURE_REG.get().load(&device, &queue, &layout, id, bytes.as_slice()).unwrap();
         *next_texture_id.lock().unwrap() += 1;
 
-        Ok(Texture(id))
+        wrap_instance(lua, Texture(id), &table_clone)
     })?;
 
     texture_table.set("new", new_texture)?;
 
     let sprite_table = lua.create_table()?;
 
+    let table_clone = sprite_table.clone();
     let new_sprite = lua.create_function(
-        move |_, (x, y, texture): (f32, f32, Texture)| {
+        move |lua, (x, y, texture): (f32, f32, Texture)| {
             let instance = Instance {
                 position: Vec3 { x, y, z: 0.0 },
                 rotation: 0.0,
@@ -51,7 +53,7 @@ pub fn sprite_mod(
                 zindex: 0.0,
             };
 
-            Ok(sprite)
+            wrap_instance(lua, sprite, &table_clone)
         }
     )?;
 

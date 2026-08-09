@@ -1,13 +1,16 @@
 use mlua::{Lua, UserData, userdata_impl};
 
-use crate::{api::components::Transform, graphics::camera::CAM_INSTANCES};
+use engine::{graphics::camera::CAM_INSTANCES};
+
+use crate::{components::Transform, wrap_instance};
 
 pub fn camera_mod(
     lua: &mut Lua,
 ) -> mlua::Result<()> {
     let camera_table = lua.create_table()?;
 
-    let new = lua.create_function(move |_, position: Transform| {
+    let cam_table_clone = camera_table.clone();
+    let new = lua.create_function(move |lua, position: Transform| {
         let mut cam_instances = CAM_INSTANCES.get();
         let id = cam_instances.next_id();
 
@@ -15,9 +18,9 @@ pub fn camera_mod(
             position,
             id,
         };
-        cam_instances.cameras.insert(id, position);
+        cam_instances.cameras.insert(id, (position.x, position.y));
 
-        Ok(cam)
+        wrap_instance(lua, cam, &cam_table_clone)
     })?;
     camera_table.set("new", new)?;
 
@@ -44,6 +47,6 @@ impl LuauCamera {
     #[lua(setter, name = "position", infallible)]
     fn set_pos(&mut self, pos: Transform) {
         self.position = pos;
-        CAM_INSTANCES.get().cameras.insert(self.id, pos);
+        CAM_INSTANCES.get().cameras.insert(self.id, (pos.x, pos.y));
     }
 }

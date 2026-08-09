@@ -3,7 +3,9 @@ use std::{fs, sync::Mutex};
 use glam::{Vec2, Vec3};
 use mlua::{FromLua, Lua, UserData, userdata_impl};
 
-use crate::{api::components::Transform, graphics::instance::{INSTANCES, Instance, TEXTURE_REG}};
+use engine::graphics::instance::{INSTANCES, Instance, TEXTURE_REG};
+
+use crate::components::Transform;
 
 pub fn sprite_mod(
     lua: &mut Lua,

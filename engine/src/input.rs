@@ -1,26 +1,29 @@
-use std::{collections::HashSet, sync::{Arc, Mutex}};
+use std::collections::HashSet;
 
 use winit::keyboard::KeyCode;
 
+use crate::Shared;
+
+pub static INPUT_STATE: Shared<InputState> = Shared::new();
+
 #[derive(Clone)]
-pub struct InputState(Arc<Mutex<HashSet<KeyCode>>>);
+pub struct InputState(HashSet<KeyCode>);
 
 impl InputState {
     pub fn new() -> Self {
-        Self(Arc::new(Mutex::new(HashSet::new())))
+        Self(HashSet::new())
     }
     
-    pub fn set_pressed(&self, key: KeyCode, pressed: bool) {
-        let mut keys = self.0.lock().unwrap();
+    pub fn set_pressed(&mut self, key: KeyCode, pressed: bool) {
         if pressed {
-            keys.insert(key);
+            self.0.insert(key);
         } else {
-            keys.remove(&key);
+            self.0.remove(&key);
         }
     }
 
     pub fn is_down(&self, key: KeyCode) -> bool {
-        self.0.lock().unwrap().contains(&key)
+        self.0.contains(&key)
     }
 }
 

@@ -1,8 +1,7 @@
 use std::sync::{Mutex, OnceLock};
 
 pub mod graphics;
-mod input;
-mod api;
+pub mod input;
 
 pub struct Shared<T>(pub OnceLock<Mutex<T>>);
 

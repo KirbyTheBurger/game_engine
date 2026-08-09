@@ -6,12 +6,13 @@ use mlua::Lua;
 use wgpu::{Operations, util::DeviceExt};
 use winit::{keyboard::KeyCode, window::Window};
 
-use crate::{api, graphics::{camera::{CAM_INSTANCES, CAMERA, CamInstances, Camera, CameraUniform}, instance::{INSTANCES, InstanceRaw, TEXTURE_REG, TextureReg}, vertex::{INDICES, VERTICES, Vertex}}, input::InputState};
+use crate::{graphics::{camera::{CAM_INSTANCES, CAMERA, CamInstances, Camera, CameraUniform}, instance::{INSTANCES, InstanceRaw, TEXTURE_REG, TextureReg}, vertex::{INDICES, VERTICES, Vertex}}, input::{INPUT_STATE, InputState}};
 
 pub struct State {
     surface: wgpu::Surface<'static>,
-    device: wgpu::Device,
-    queue: wgpu::Queue,
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
+    pub texture_layout: wgpu::BindGroupLayout,
     config: wgpu::SurfaceConfiguration,
     is_surface_configured: bool,
     render_pipeline: wgpu::RenderPipeline,
@@ -22,8 +23,7 @@ pub struct State {
     camera_uniform: CameraUniform,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
-    input_state: InputState,
-    lua: Lua,
+    pub lua: Lua,
     last_frame: std::time::Instant,
     instance_buffer: wgpu::Buffer,
 }
@@ -237,19 +237,12 @@ impl State {
             }
         );
 
-        let input_state = InputState::new();
+        INPUT_STATE.set(InputState::new()).unwrap();
 
         CAM_INSTANCES.set(CamInstances::new()).unwrap();
 
         INSTANCES.set(Vec::new()).unwrap();
         TEXTURE_REG.set(TextureReg(HashMap::new())).unwrap();
-
-        let lua = api::init(
-            input_state.clone(),
-            device.clone(),
-            queue.clone(),
-            texture_bind_group_layout.clone(),
-        )?;
 
         Ok(Self {
             surface,
@@ -265,10 +258,10 @@ impl State {
             camera_uniform,
             camera_buffer,
             camera_bind_group,
-            input_state,
-            lua,
+            lua: Lua::new(),
             last_frame: std::time::Instant::now(),
             instance_buffer,
+            texture_layout: texture_bind_group_layout,
         })
     }
 
@@ -387,8 +380,8 @@ impl State {
                 Some(t) => t,
                 None => unreachable!(),
             };
-            camera.x = primary_cam_pos.x;
-            camera.y = primary_cam_pos.y;
+            camera.x = primary_cam_pos.0;
+            camera.y = primary_cam_pos.1;
         }
 
         self.camera_uniform.update_view_proj(&CAMERA.get());
@@ -398,6 +391,6 @@ impl State {
     }
 
     pub fn handle_key(&self, key: KeyCode, pressed: bool) {
-        self.input_state.set_pressed(key, pressed);
+        INPUT_STATE.get().set_pressed(key, pressed);
     }
 }

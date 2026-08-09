@@ -1,0 +1,11 @@
+[package]
+name = "api"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+derive_more = { version = "2.1.1", features = ["add"] }
+engine = { version = "0.1.0", path = "../engine" }
+glam = "0.33.3"
+mlua = "0.12.0"
+wgpu = "30.0.0"

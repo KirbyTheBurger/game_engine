@@ -1,11 +1,19 @@
 use std::sync::Arc;
 
-use winit::{application::ApplicationHandler, event::{KeyEvent, WindowEvent}, keyboard::PhysicalKey, window::Window};
+use engine::graphics::state::State;
+use winit::{event_loop::EventLoop, application::ApplicationHandler, event::{KeyEvent, WindowEvent}, keyboard::PhysicalKey, window::Window};
 
-use crate::graphics::state::State;
+
+fn main() {
+    env_logger::init();
+
+    let event_loop = EventLoop::with_user_event().build().unwrap();
+    let mut app = App::new();
+    event_loop.run_app(&mut app).unwrap();
+}
 
 pub struct App {
-    state: Option<State>,
+    pub state: Option<State>,
 }
 
 impl App {
@@ -22,6 +30,14 @@ impl ApplicationHandler<State> for App {
         let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
 
         self.state = Some(pollster::block_on(State::new(window)).unwrap());
+
+        let state = self.state.as_mut().unwrap();
+        api::init(
+            &mut state.lua,
+            state.device.clone(),
+            state.queue.clone(),
+            state.texture_layout.clone(),
+        ).unwrap();
     }
 
     fn user_event(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop, event: State) {

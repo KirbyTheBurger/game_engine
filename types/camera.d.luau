@@ -6,5 +6,5 @@ declare extern type Camera with
 end
 
 declare Camera: {
-    new: (position: Transform) -> Camera
+    new: () -> Camera
 }

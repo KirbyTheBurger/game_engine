@@ -32,9 +32,9 @@ pub fn sprite_mod(
 
     let table_clone = sprite_table.clone();
     let new_sprite = lua.create_function(
-        move |lua, (x, y, texture): (f32, f32, Texture)| {
+        move |lua, texture: Texture| {
             let instance = Instance {
-                position: Vec3 { x, y, z: 0.0 },
+                position: Vec3 { x: 0., y: 0., z: 0. },
                 rotation: 0.0,
                 scale: Vec2 { x: 1.0, y: 1.0 },
                 texture_id: texture.0,
@@ -47,7 +47,7 @@ pub fn sprite_mod(
             let sprite = Sprite {
                 texture_id: texture.0,
                 instance_idx: instances.len() - 1,
-                position: Transform { x, y },
+                position: Transform { x: 0., y: 0. },
                 rotation: 0.0,
                 scale: Transform { x: 0.0, y: 0.0 },
                 zindex: 0.0,

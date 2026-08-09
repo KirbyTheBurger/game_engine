@@ -10,15 +10,15 @@ pub fn camera_mod(
     let camera_table = lua.create_table()?;
 
     let cam_table_clone = camera_table.clone();
-    let new = lua.create_function(move |lua, position: Transform| {
+    let new = lua.create_function(move |lua, _: ()| {
         let mut cam_instances = CAM_INSTANCES.get();
         let id = cam_instances.next_id();
 
         let cam = LuauCamera {
-            position,
+            position: Transform { x: 0., y: 0. },
             id,
         };
-        cam_instances.cameras.insert(id, (position.x, position.y));
+        cam_instances.cameras.insert(id, (0., 0.));
 
         wrap_instance(lua, cam, &cam_table_clone)
     })?;

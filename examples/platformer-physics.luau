@@ -1,8 +1,8 @@
-Camera.new(Transform(0, 0)):setPrimary()
+Camera.new():setPrimary()
 
 local texture = Texture.new("brownie.png")
 
-local player = Sprite.new(0, 0, texture)
+local player = Sprite.new(texture)
 player.scale = Transform(0.5, 0.5)
 player.zindex = 1
 

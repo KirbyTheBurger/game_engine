@@ -15,5 +15,5 @@ declare extern type Sprite with
 end
 
 declare Sprite: {
-    new: (x: number, y: number, texture: Texture) -> Sprite
+    new: (texture: Texture) -> Sprite
 }

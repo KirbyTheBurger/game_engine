@@ -1,0 +1,3 @@
+declare Runtime: {
+    OnUpdate: ((((number) -> ()) | (() -> ()))) -> ()
+}

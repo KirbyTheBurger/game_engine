@@ -1,5 +1,6 @@
 # Introduction
-This is a minimal 2d game engine, made in Rust. It features a luau api for scripting with camera movement, sprites and input detection. It uses WebGPU for rendering, but only uses the Vulkan functionality so games are not embeddable in the browser.
+This is a minimal 2d game engine, made in Rust. It features a luau api for scripting with camera movement, sprites and input detection. It uses WebGPU for rendering, but only uses the Vulkan functionality so games are not embeddable in the browser.  
+https://github.com/user-attachments/assets/a89f83f3-c54f-4ee7-97a9-c93443ee0a90
 
 # Documentation
 Below is the documentation. Do note that the game engine is very minimal and because of that impractical to genuinely use for making games.
